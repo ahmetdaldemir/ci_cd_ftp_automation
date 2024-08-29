@@ -1,0 +1,73 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths-ignore:
+      - '.git/**'
+      - 'vendor/**'
+      - '.env'
+      - '.circleci'
+      - '.htaccess'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '14'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+  deploy_ftp:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install lftp
+        run: sudo apt-get install -y lftp
+
+      - name: Deploy to FTP server
+        env:
+          FTP_HOST: '000.00.00.00'
+          FTP_USERNAME: 'u856xxxxxx'
+          FTP_PASSWORD: 'xxxxxxx@'
+          REMOTE_PATH: 'ypur_path'
+        run: |
+          lftp -e "set ssl:verify-certificate no; mirror --reverse --verbose --only-newer --exclude-glob .git* --exclude-glob vendor --exclude-glob .env --exclude-glob .circleci --exclude-glob .htaccess ./ $REMOTE_PATH; bye" \
+          -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST
+
+  deploy_test:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install lftp
+        run: sudo apt-get install -y lftp
+
+      - name: Deploy to FTP server
+        env:
+          FTP_HOST: '000.00.00.00'
+          FTP_USERNAME: 'u856xxxxxx'
+          FTP_PASSWORD: 'xxxxxxx@'
+          REMOTE_PATH: 'ypur_path'
+        run: |
+          lftp -e "set ssl:verify-certificate no; mirror --reverse --verbose --only-newer --exclude-glob .git* --exclude-glob vendor --exclude-glob .env --exclude-glob .circleci --exclude-glob .htaccess ./ $REMOTE_PATH; bye" \
+          -u $FTP_USERNAME,$FTP_PASSWORD $FTP_HOST
